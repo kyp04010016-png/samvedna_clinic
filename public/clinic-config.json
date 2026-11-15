@@ -1,0 +1,26 @@
+{
+  "appName": "Sandana Clinic & Dudrucs Pharmacy ERP",
+  "version": "2.5.0-production",
+  "autoSeedOnEmptyDatabase": true,
+  "otpGateway": {
+    "enabled": true,
+    "phpEndpoint": "/otp.php",
+    "nodeEndpoint": "/api/otp/send",
+    "showOnScreenOtpFallback": true,
+    "expiryMinutes": 5
+  },
+  "clinicDefaults": {
+    "clinicName": "Sandana Clinic",
+    "medicalName": "Dudrucs",
+    "clinicAddress": "42, MG Healthcare Road, Anna Nagar, Chennai - 600040",
+    "clinicPhone": "+91 98400 11223",
+    "medicalPhone": "919840011224",
+    "clinicTimings": "Mon - Sat: 09:00 AM - 09:00 PM | Sun: 10:00 AM - 02:00 PM",
+    "googleMapUrl": "https://www.google.com/maps/search/?api=1&query=Sandana+Clinic+42+MG+Healthcare+Road+Anna+Nagar+Chennai+600040",
+    "upiId": "sandanaclinic@okaxis",
+    "upiName": "Dudrucs",
+    "razorpayEnabled": true,
+    "razorpayKeyId": "rzp_test_SandanaDudrucs99",
+    "razorpayMode": "live"
+  }
+}

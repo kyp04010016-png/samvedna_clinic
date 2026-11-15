@@ -1,0 +1,287 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isAuth() && request.auth.token.email == 'kyp04010016@gmail.com' && request.auth.token.email_verified == true;
+    }
+
+    function hasUserDoc() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (hasUserDoc() && role() == 'admin');
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'role']) &&
+        data.keys().hasOnly(['uid', 'name', 'email', 'phone', 'role', 'isActive', 'staffKey', 'password', 'doctorId', 'specialization', 'loginId', 'createdAt', 'updatedAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('loginId' in data) || (data.loginId is string && data.loginId.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('staffKey' in data) || (data.staffKey is string && data.staffKey.size() <= 200)) &&
+        (!('password' in data) || (data.password is string && data.password.size() <= 200)) &&
+        (!('doctorId' in data) || (data.doctorId is string && data.doctorId.size() <= 128)) &&
+        (!('specialization' in data) || (data.specialization is string && data.specialization.size() <= 150)) &&
+        (!('isActive' in data) || data.isActive is bool) &&
+        data.role is string && data.role in ['admin', 'doctor', 'pharmacy', 'reception'] &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+    }
+
+    function isValidStaffActivity(data) {
+      return data.keys().hasAll(['staffId', 'staffName', 'action', 'details', 'timestamp']) &&
+        data.keys().hasOnly(['staffId', 'staffName', 'action', 'details', 'timestamp']) &&
+        data.staffId is string && data.staffId.size() >= 1 && data.staffId.size() <= 128 &&
+        data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 150 &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 120 &&
+        data.details is string && data.details.size() >= 1 && data.details.size() <= 1000 &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 60;
+    }
+
+    function isValidOtp(data) {
+      return data.keys().hasAll(['otp', 'expiry']) &&
+        data.keys().hasOnly(['otp', 'expiry', 'email', 'phone', 'purpose', 'staffKey', 'staffName', 'staffRole', 'doctorId', 'specialization', 'createdAt', 'updatedAt']) &&
+        data.otp is string && data.otp.size() == 6 &&
+        data.expiry is string && data.expiry.size() >= 10 && data.expiry.size() <= 60 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('purpose' in data) || (data.purpose is string && data.purpose.size() <= 50)) &&
+        (!('staffKey' in data) || (data.staffKey is string && data.staffKey.size() <= 200)) &&
+        (!('staffName' in data) || (data.staffName is string && data.staffName.size() <= 150)) &&
+        (!('staffRole' in data) || (data.staffRole is string && data.staffRole in ['admin', 'doctor', 'pharmacy', 'reception'])) &&
+        (!('doctorId' in data) || (data.doctorId is string && data.doctorId.size() <= 128)) &&
+        (!('specialization' in data) || (data.specialization is string && data.specialization.size() <= 150)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 60)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 60));
+    }
+
+    function isValidDoctor(data) {
+      return data.keys().hasAll(['name', 'specialization']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        data.specialization is string && data.specialization.size() >= 1 && data.specialization.size() <= 150;
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['patientName', 'phone', 'doctorId', 'date', 'slot', 'status']) &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 150 &&
+        data.phone is string && data.phone.size() >= 3 && data.phone.size() <= 30 &&
+        data.doctorId is string && data.doctorId.size() >= 1 && data.doctorId.size() <= 128 &&
+        data.date is string && data.date.size() >= 6 && data.date.size() <= 30 &&
+        data.slot is string && data.slot.size() >= 1 && data.slot.size() <= 50 &&
+        data.status is string && data.status in ['booked', 'confirmed', 'completed', 'cancelled'];
+    }
+
+    function isValidToken(data) {
+      return data.keys().hasAll(['patientName', 'date']) &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 150 &&
+        data.date is string && data.date.size() >= 6 && data.date.size() <= 30;
+    }
+
+    function isValidMedicine(data) {
+      return data.keys().hasAll(['name']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200;
+    }
+
+    function isValidBatch(data) {
+      return data.keys().hasAll(['medicineId', 'medicineName', 'batchNo', 'expiryDate', 'costPrice', 'mrp', 'sellPrice', 'stock']) &&
+        data.medicineId is string && data.medicineId.size() >= 1 && data.medicineId.size() <= 128 &&
+        data.medicineName is string && data.medicineName.size() >= 1 && data.medicineName.size() <= 200 &&
+        data.batchNo is string && data.batchNo.size() >= 1 && data.batchNo.size() <= 80 &&
+        data.expiryDate is string && data.expiryDate.size() >= 4 && data.expiryDate.size() <= 30 &&
+        data.costPrice is number && data.costPrice >= 0 &&
+        data.mrp is number && data.mrp >= 0 &&
+        data.sellPrice is number && data.sellPrice >= 0 &&
+        data.stock is number && data.stock >= 0;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['invoiceNo', 'items', 'grandTotal', 'paymentStatus', 'staffId', 'staffName', 'createdAt']) &&
+        data.invoiceNo is string && data.invoiceNo.size() >= 2 && data.invoiceNo.size() <= 60 &&
+        data.items is list && data.items.size() >= 1 &&
+        data.grandTotal is number && data.grandTotal >= 0 &&
+        data.paymentStatus is string && data.paymentStatus in ['pending', 'paid'] &&
+        data.staffId is string && data.staffId.size() >= 1 && data.staffId.size() <= 128 &&
+        data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 150 &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 60;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['patientName', 'rating', 'comment', 'isApproved', 'createdAt']) &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 150 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 2000 &&
+        data.isApproved is bool &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 60;
+    }
+
+    function isValidSettings(data) {
+      return data is map;
+    }
+
+    function isValidCounter(data) {
+      return data.keys().hasAll(['lastNumber']) &&
+        data.lastNumber is number && data.lastNumber >= 0 && data.lastNumber <= 100000000;
+    }
+
+    function isValidBackup(data) {
+      return data.keys().hasAll(['name', 'createdBy', 'createdAt', 'counts', 'payloadJson', 'checksum']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 200 &&
+        data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 150 &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 60 &&
+        data.counts is map &&
+        data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 990000 &&
+        data.checksum is string && data.checksum.size() >= 2 && data.checksum.size() <= 128;
+    }
+
+    function isValidPrescription(data) {
+      return data.keys().hasAll(['prescriptionNo', 'patientName', 'phone', 'doctorId', 'doctorName', 'date', 'diagnosis', 'medicines', 'createdAt']) &&
+        data.prescriptionNo is string && data.prescriptionNo.size() >= 1 && data.prescriptionNo.size() <= 100 &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 150 &&
+        data.phone is string && data.phone.size() <= 35 &&
+        data.doctorId is string && data.doctorId.size() >= 1 && data.doctorId.size() <= 128 &&
+        data.doctorName is string && data.doctorName.size() >= 1 && data.doctorName.size() <= 150 &&
+        data.date is string && data.date.size() <= 50 &&
+        data.diagnosis is string && data.diagnosis.size() <= 2000 &&
+        data.medicines is list &&
+        data.createdAt is string && data.createdAt.size() <= 60;
+    }
+
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+    }
+
+    match /users/{uid} {
+      allow get: if isValidId(uid);
+      allow list: if request.time != null;
+      allow create: if isValidId(uid) && isValidUser(incoming());
+      allow update: if isValidUser(incoming()) && isValidId(uid);
+      allow delete: if isValidId(uid) && (isAdmin() || request.time != null);
+    }
+
+    match /staff_activity/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidStaffActivity(incoming());
+      allow update, delete: if isValidId(id);
+    }
+
+    match /otp_verification/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidOtp(incoming());
+      allow update: if isValidOtp(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /doctors/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidDoctor(incoming());
+      allow update: if isValidDoctor(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /appointments/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidAppointment(incoming());
+      allow update: if isValidAppointment(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /tokens/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidToken(incoming());
+      allow update: if isValidToken(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /medicines/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidMedicine(incoming());
+      allow update: if isValidMedicine(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /batches/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidBatch(incoming());
+      allow update: if isValidBatch(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /invoices/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidInvoice(incoming());
+      allow update: if isValidInvoice(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /feedback/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidFeedback(incoming());
+      allow update: if isValidFeedback(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /settings/{doc} {
+      allow get: if isValidId(doc);
+      allow list: if request.time != null;
+      allow create: if isValidId(doc) && isValidSettings(incoming());
+      allow update: if isValidSettings(incoming()) && isValidId(doc);
+      allow delete: if false;
+    }
+
+    match /counters/{doc} {
+      allow get: if isValidId(doc);
+      allow list: if request.time != null;
+      allow create: if isValidId(doc) && isValidCounter(incoming());
+      allow update: if isValidCounter(incoming()) && isValidId(doc);
+      allow delete: if false;
+    }
+
+    match /backups/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidBackup(incoming());
+      allow update: if isValidBackup(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /prescriptions/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidPrescription(incoming());
+      allow update: if isValidId(id) && isValidPrescription(incoming());
+      allow delete: if isValidId(id);
+    }
+  }
+}

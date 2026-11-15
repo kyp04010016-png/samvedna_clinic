@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Staff user account with role-based access control and active status",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "doctor", "pharmacy", "reception"] },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "role", "createdAt"]
+    },
+    "StaffActivity": {
+      "title": "StaffActivity",
+      "description": "Audit log of staff actions across billing, stock, and masters",
+      "type": "object",
+      "properties": {
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "action": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["staffId", "staffName", "action", "details", "timestamp"]
+    },
+    "OtpVerification": {
+      "title": "OtpVerification",
+      "description": "6-digit OTP verification record with 5-minute expiry for appointment booking and staff OTP login",
+      "type": "object",
+      "properties": {
+        "otp": { "type": "string" },
+        "expiry": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "purpose": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["otp", "expiry"]
+    },
+    "Doctor": {
+      "title": "Doctor",
+      "description": "Clinic doctor profile and schedule",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "specialization": { "type": "string" },
+        "qualification": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "availableSlots": { "type": "array", "items": { "type": "string" } },
+        "availableDays": { "type": "array", "items": { "type": "string" } },
+        "isActive": { "type": "boolean" },
+        "uid": { "type": "string" }
+      },
+      "required": ["name", "specialization", "availableSlots", "availableDays", "isActive"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Patient appointment and token record",
+      "type": "object",
+      "properties": {
+        "patientName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "age": { "type": "number" },
+        "doctorId": { "type": "string" },
+        "doctorName": { "type": "string" },
+        "date": { "type": "string" },
+        "slot": { "type": "string" },
+        "status": { "type": "string", "enum": ["booked", "completed", "cancelled"] },
+        "bookedBy": { "type": "string", "enum": ["patient", "reception"] },
+        "tokenNo": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["patientName", "phone", "age", "doctorId", "doctorName", "date", "slot", "status", "bookedBy", "createdAt"]
+    },
+    "Medicine": {
+      "title": "Medicine",
+      "description": "Marg-style Medicine Master record",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "brand": { "type": "string" },
+        "genericName": { "type": "string" },
+        "manufacturer": { "type": "string" },
+        "hsnCode": { "type": "string" },
+        "unit": { "type": "string", "enum": ["tablet", "bottle", "strip"] },
+        "gstPercent": { "type": "number", "enum": [5, 12, 18] },
+        "schedule": { "type": "string", "enum": ["OTC", "H", "H1", "X"] },
+        "scheduleType": { "type": "string", "enum": ["OTC", "H", "H1", "X"] },
+        "reorderLevel": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "brand", "reorderLevel", "createdAt"]
+    },
+    "Batch": {
+      "title": "Batch",
+      "description": "Marg-style Batch inventory record with FIFO expiry, cost, MRP, sellPrice, and marginPercent",
+      "type": "object",
+      "properties": {
+        "medicineId": { "type": "string" },
+        "medicineName": { "type": "string" },
+        "batchNo": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "costPrice": { "type": "number" },
+        "mrp": { "type": "number" },
+        "sellPrice": { "type": "number" },
+        "marginPercent": { "type": "number" },
+        "stock": { "type": "number" },
+        "supplierName": { "type": "string" },
+        "purchaseDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["medicineId", "medicineName", "batchNo", "expiryDate", "costPrice", "mrp", "sellPrice", "stock", "createdAt"]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Marg-style Pharmacy invoice with batch tracking, GST, cost, and grossProfit",
+      "type": "object",
+      "properties": {
+        "invoiceNo": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "totalDiscount": { "type": "number" },
+        "totalGst": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "totalCost": { "type": "number" },
+        "grossProfit": { "type": "number" },
+        "totalProfit": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid"] },
+        "paymentMode": { "type": "string", "enum": ["cash", "upi", "razorpay"] },
+        "razorpayPaymentId": { "type": "string" },
+        "razorpayMethod": { "type": "string" },
+        "staffId": { "type": "string" },
+        "staffName": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["invoiceNo", "items", "grandTotal", "paymentStatus", "paymentMode", "staffId", "staffName", "customerName", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "Patient rating and review",
+      "type": "object",
+      "properties": {
+        "patientName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "doctorId": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["patientName", "rating", "comment", "isApproved", "createdAt"]
+    },
+    "ClinicSettings": {
+      "title": "ClinicSettings",
+      "description": "Global clinic, UPI, Razorpay gateway, default margin, slider images, and social links configuration",
+      "type": "object",
+      "properties": {
+        "upiId": { "type": "string" },
+        "upiName": { "type": "string" },
+        "razorpayEnabled": { "type": "boolean" },
+        "razorpayKeyId": { "type": "string" },
+        "razorpayMerchantName": { "type": "string" },
+        "razorpayThemeColor": { "type": "string" },
+        "razorpayMode": { "type": "string", "enum": ["test", "live"] },
+        "razorpayMethods": { "type": "object" },
+        "clinicName": { "type": "string" },
+        "clinicAddress": { "type": "string" },
+        "clinicPhone": { "type": "string" },
+        "clinicTimings": { "type": "string" },
+        "medicalName": { "type": "string" },
+        "medicalPhone": { "type": "string" },
+        "defaultMarginPercent": { "type": "number" },
+        "sliderImages": { "type": "array", "items": { "type": "string" } },
+        "socialLinks": { "type": "object" },
+        "clinicInfo": { "type": "string" },
+        "googleMapUrl": { "type": "string" },
+        "otpConfig": { "type": "object" }
+      }
+    },
+    "InvoiceCounter": {
+      "title": "InvoiceCounter",
+      "description": "Sequential invoice counter",
+      "type": "object",
+      "properties": {
+        "lastNumber": { "type": "number" }
+      },
+      "required": ["lastNumber"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "Staff user documents" },
+    "/staff_activity/{id}": { "schema": "StaffActivity", "description": "Staff activity audit log" },
+    "/otp_verification/{id}": { "schema": "OtpVerification", "description": "6-digit OTP verification store" },
+    "/doctors/{id}": { "schema": "Doctor", "description": "Doctor profiles" },
+    "/appointments/{id}": { "schema": "Appointment", "description": "Patient appointments" },
+    "/medicines/{id}": { "schema": "Medicine", "description": "Marg Medicine Master" },
+    "/batches/{id}": { "schema": "Batch", "description": "Marg Medicine Batches" },
+    "/invoices/{id}": { "schema": "Invoice", "description": "Pharmacy billing invoices" },
+    "/feedback/{id}": { "schema": "Feedback", "description": "Patient feedback" },
+    "/settings/{doc}": { "schema": "ClinicSettings", "description": "Clinic & site settings" },
+    "/counters/{doc}": { "schema": "InvoiceCounter", "description": "Invoice sequence counter" }
+  }
+}

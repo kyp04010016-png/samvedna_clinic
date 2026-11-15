@@ -1,0 +1,316 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isAuth() && request.auth.token.email == 'kyp04010016@gmail.com' && request.auth.token.email_verified == true;
+    }
+
+    function hasUserDoc() {
+      return isAuth() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isBootstrappedAdmin() || (hasUserDoc() && role() == 'admin');
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'role']) &&
+        data.keys().hasOnly(['name', 'email', 'phone', 'role', 'isActive', 'createdAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 100 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 25)) &&
+        (!('isActive' in data) || data.isActive is bool) &&
+        data.role is string && data.role in ['admin', 'doctor', 'pharmacy', 'reception'] &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    function isValidStaffActivity(data) {
+      return data.keys().hasAll(['staffId', 'staffName', 'action', 'details', 'timestamp']) &&
+        data.keys().hasOnly(['staffId', 'staffName', 'action', 'details', 'timestamp']) &&
+        data.staffId is string && data.staffId.size() >= 1 && data.staffId.size() <= 128 &&
+        data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 120 &&
+        data.action is string && data.action.size() >= 1 && data.action.size() <= 100 &&
+        data.details is string && data.details.size() >= 1 && data.details.size() <= 500 &&
+        data.timestamp is string && data.timestamp.size() >= 1 && data.timestamp.size() <= 50;
+    }
+
+    function isValidOtp(data) {
+      return data.keys().hasAll(['otp', 'expiry']) &&
+        data.keys().hasOnly(['otp', 'expiry', 'email', 'phone', 'purpose', 'staffKey', 'staffName', 'staffRole', 'createdAt']) &&
+        data.otp is string && data.otp.size() == 6 &&
+        data.expiry is string && data.expiry.size() >= 10 && data.expiry.size() <= 50 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('purpose' in data) || (data.purpose is string && data.purpose.size() <= 40)) &&
+        (!('staffKey' in data) || (data.staffKey is string && data.staffKey.size() <= 200)) &&
+        (!('staffName' in data) || (data.staffName is string && data.staffName.size() <= 120)) &&
+        (!('staffRole' in data) || (data.staffRole is string && data.staffRole in ['admin', 'doctor', 'pharmacy', 'reception'])) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    function isValidDoctor(data) {
+      return data.keys().hasAll(['name', 'specialization']) &&
+        data.keys().hasOnly(['name', 'specialization', 'qualification', 'photoUrl', 'availableSlots', 'availableDays', 'slots', 'timing', 'isActive', 'uid', 'experience', 'consultationFee', 'bio', 'regNo', 'languages', 'phone']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.specialization is string && data.specialization.size() >= 1 && data.specialization.size() <= 120 &&
+        (!('qualification' in data) || (data.qualification is string && data.qualification.size() <= 150)) &&
+        (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 500)) &&
+        (!('uid' in data) || (data.uid is string && data.uid.size() <= 128)) &&
+        (!('experience' in data) || (data.experience is string && data.experience.size() <= 60)) &&
+        (!('consultationFee' in data) || (data.consultationFee is number && data.consultationFee >= 0 && data.consultationFee <= 100000)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+        (!('regNo' in data) || (data.regNo is string && data.regNo.size() <= 80)) &&
+        (!('languages' in data) || (data.languages is string && data.languages.size() <= 150)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('timing' in data) || (data.timing is string && data.timing.size() <= 120)) &&
+        (!('availableSlots' in data) || (data.availableSlots is list && data.availableSlots.size() <= 50)) &&
+        (!('slots' in data) || (data.slots is list && data.slots.size() <= 50)) &&
+        (!('availableDays' in data) || (data.availableDays is list && data.availableDays.size() <= 7)) &&
+        (!('isActive' in data) || data.isActive is bool);
+    }
+
+    function isValidAppointment(data) {
+      return data.keys().hasAll(['patientName', 'phone', 'doctorId', 'date', 'slot', 'status', 'bookedBy']) &&
+        data.keys().hasOnly(['patientName', 'email', 'phone', 'age', 'doctorId', 'doctorName', 'date', 'slot', 'status', 'bookedBy', 'tokenNo', 'createdAt']) &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 120 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 150)) &&
+        data.phone is string && data.phone.size() >= 5 && data.phone.size() <= 25 &&
+        (!('age' in data) || (data.age is number && data.age >= 0 && data.age <= 150)) &&
+        data.doctorId is string && data.doctorId.size() >= 1 && data.doctorId.size() <= 128 &&
+        (!('doctorName' in data) || (data.doctorName is string && data.doctorName.size() <= 120)) &&
+        data.date is string && data.date.size() >= 8 && data.date.size() <= 15 &&
+        data.slot is string && data.slot.size() >= 1 && data.slot.size() <= 30 &&
+        data.status is string && data.status in ['booked', 'confirmed', 'completed', 'cancelled'] &&
+        data.bookedBy is string && data.bookedBy in ['patient', 'reception', 'admin'] &&
+        (!('tokenNo' in data) || (data.tokenNo is number && data.tokenNo >= 1 && data.tokenNo <= 10000)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    function isValidMedicine(data) {
+      return data.keys().hasAll(['name', 'brand']) &&
+        data.keys().hasOnly(['name', 'brand', 'barcode', 'genericName', 'manufacturer', 'hsnCode', 'unit', 'gstPercent', 'schedule', 'scheduleType', 'reorderLevel', 'createdAt']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        data.brand is string && data.brand.size() <= 120 &&
+        (!('barcode' in data) || (data.barcode is string && data.barcode.size() <= 80)) &&
+        (!('genericName' in data) || (data.genericName is string && data.genericName.size() <= 150)) &&
+        (!('manufacturer' in data) || (data.manufacturer is string && data.manufacturer.size() <= 150)) &&
+        (!('hsnCode' in data) || (data.hsnCode is string && data.hsnCode.size() <= 30)) &&
+        (!('unit' in data) || (data.unit is string && data.unit in ['tablet', 'bottle', 'strip'])) &&
+        (!('gstPercent' in data) || (data.gstPercent is number && data.gstPercent in [0, 5, 12, 18, 28])) &&
+        (!('schedule' in data) || (data.schedule is string && data.schedule in ['OTC', 'H', 'H1', 'X'])) &&
+        (!('scheduleType' in data) || (data.scheduleType is string && data.scheduleType in ['OTC', 'H', 'H1', 'X'])) &&
+        (!('reorderLevel' in data) || (data.reorderLevel is number && data.reorderLevel >= 0 && data.reorderLevel <= 100000)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    function isValidBatch(data) {
+      return data.keys().hasAll(['medicineId', 'medicineName', 'batchNo', 'expiryDate', 'costPrice', 'mrp', 'sellPrice', 'stock']) &&
+        data.keys().hasOnly(['medicineId', 'medicineName', 'batchNo', 'barcode', 'expiryDate', 'costPrice', 'mrp', 'sellPrice', 'marginPercent', 'stock', 'supplierName', 'purchaseDate', 'createdAt']) &&
+        data.medicineId is string && data.medicineId.size() >= 1 && data.medicineId.size() <= 128 &&
+        data.medicineName is string && data.medicineName.size() >= 1 && data.medicineName.size() <= 150 &&
+        data.batchNo is string && data.batchNo.size() >= 1 && data.batchNo.size() <= 60 &&
+        (!('barcode' in data) || (data.barcode is string && data.barcode.size() <= 80)) &&
+        data.expiryDate is string && data.expiryDate.size() >= 6 && data.expiryDate.size() <= 20 &&
+        data.costPrice is number && data.costPrice >= 0 && data.costPrice <= 1000000 &&
+        data.mrp is number && data.mrp >= 0 && data.mrp <= 1000000 &&
+        data.sellPrice is number && data.sellPrice >= 0 && data.sellPrice <= 1000000 &&
+        (!('marginPercent' in data) || (data.marginPercent is number && data.marginPercent >= -1000 && data.marginPercent <= 100)) &&
+        data.stock is number && data.stock >= 0 && data.stock <= 1000000 &&
+        (!('supplierName' in data) || (data.supplierName is string && data.supplierName.size() <= 120)) &&
+        (!('purchaseDate' in data) || (data.purchaseDate is string && data.purchaseDate.size() <= 20)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 50));
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll(['invoiceNo', 'items', 'grandTotal', 'paymentStatus', 'staffId', 'staffName', 'createdAt']) &&
+        data.keys().hasOnly(['invoiceNo', 'items', 'subtotal', 'totalDiscount', 'totalGst', 'grandTotal', 'totalCost', 'grossProfit', 'totalProfit', 'paymentStatus', 'paymentMode', 'staffId', 'staffName', 'customerName', 'customerPhone', 'gstNo', 'createdAt']) &&
+        data.invoiceNo is string && data.invoiceNo.size() >= 3 && data.invoiceNo.size() <= 40 &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 100 &&
+        data.items[0] is map &&
+        (!('subtotal' in data) || (data.subtotal is number && data.subtotal >= 0)) &&
+        (!('totalDiscount' in data) || (data.totalDiscount is number && data.totalDiscount >= 0)) &&
+        (!('totalGst' in data) || (data.totalGst is number && data.totalGst >= 0)) &&
+        data.grandTotal is number && data.grandTotal >= 0 &&
+        (!('totalCost' in data) || (data.totalCost is number && data.totalCost >= 0)) &&
+        (!('grossProfit' in data) || data.grossProfit is number) &&
+        (!('totalProfit' in data) || data.totalProfit is number) &&
+        data.paymentStatus is string && data.paymentStatus in ['pending', 'paid'] &&
+        (!('paymentMode' in data) || (data.paymentMode is string && data.paymentMode in ['cash', 'upi'])) &&
+        data.staffId is string && data.staffId.size() >= 1 && data.staffId.size() <= 128 &&
+        data.staffName is string && data.staffName.size() >= 1 && data.staffName.size() <= 120 &&
+        (!('customerName' in data) || (data.customerName is string && data.customerName.size() <= 120)) &&
+        (!('customerPhone' in data) || (data.customerPhone is string && data.customerPhone.size() <= 25)) &&
+        (!('gstNo' in data) || (data.gstNo is string && data.gstNo.size() <= 30)) &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 50;
+    }
+
+    function isValidFeedback(data) {
+      return data.keys().hasAll(['patientName', 'rating', 'comment', 'isApproved', 'createdAt']) &&
+        data.keys().hasOnly(['patientName', 'rating', 'comment', 'doctorId', 'isApproved', 'createdAt']) &&
+        data.patientName is string && data.patientName.size() >= 1 && data.patientName.size() <= 120 &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        data.comment is string && data.comment.size() >= 1 && data.comment.size() <= 1000 &&
+        (!('doctorId' in data) || (data.doctorId is string && data.doctorId.size() <= 128)) &&
+        data.isApproved is bool &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 50;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasOnly(['name', 'address', 'phone', 'gstNo', 'logoUrl', 'customLedgers', 'upiId', 'upiName', 'clinicName', 'clinicAddress', 'clinicPhone', 'clinicTimings', 'medicalName', 'medicalPhone', 'defaultMarginPercent', 'sliderImages', 'socialLinks', 'clinicInfo']) &&
+        (!('name' in data) || (data.name is string && data.name.size() <= 120)) &&
+        (!('address' in data) || (data.address is string && data.address.size() <= 300)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('gstNo' in data) || (data.gstNo is string && data.gstNo.size() <= 40)) &&
+        (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 450000)) &&
+        (!('customLedgers' in data) || (data.customLedgers is list && data.customLedgers.size() <= 100)) &&
+        (!('upiId' in data) || (data.upiId is string && data.upiId.size() <= 100)) &&
+        (!('upiName' in data) || (data.upiName is string && data.upiName.size() <= 120)) &&
+        (!('clinicName' in data) || (data.clinicName is string && data.clinicName.size() <= 120)) &&
+        (!('clinicAddress' in data) || (data.clinicAddress is string && data.clinicAddress.size() <= 300)) &&
+        (!('clinicPhone' in data) || (data.clinicPhone is string && data.clinicPhone.size() <= 30)) &&
+        (!('clinicTimings' in data) || (data.clinicTimings is string && data.clinicTimings.size() <= 150)) &&
+        (!('medicalName' in data) || (data.medicalName is string && data.medicalName.size() <= 120)) &&
+        (!('medicalPhone' in data) || (data.medicalPhone is string && data.medicalPhone.size() <= 30)) &&
+        (!('defaultMarginPercent' in data) || (data.defaultMarginPercent is number && data.defaultMarginPercent >= 0 && data.defaultMarginPercent <= 500)) &&
+        (!('sliderImages' in data) || (data.sliderImages is list && data.sliderImages.size() <= 20)) &&
+        (!('socialLinks' in data) || data.socialLinks is map) &&
+        (!('clinicInfo' in data) || (data.clinicInfo is string && data.clinicInfo.size() <= 2000));
+    }
+
+    function isValidCounter(data) {
+      return data.keys().hasAll(['lastNumber']) &&
+        data.keys().hasOnly(['lastNumber']) &&
+        data.lastNumber is number && data.lastNumber >= 0 && data.lastNumber <= 10000000;
+    }
+
+    function isValidBackup(data) {
+      return data.keys().hasAll(['name', 'createdBy', 'createdAt', 'counts', 'payloadJson', 'checksum']) &&
+        data.keys().hasOnly(['name', 'createdBy', 'createdAt', 'counts', 'payloadJson', 'checksum']) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+        data.createdBy is string && data.createdBy.size() >= 1 && data.createdBy.size() <= 120 &&
+        data.createdAt is string && data.createdAt.size() >= 1 && data.createdAt.size() <= 50 &&
+        data.counts is map &&
+        data.payloadJson is string && data.payloadJson.size() >= 2 && data.payloadJson.size() <= 950000 &&
+        data.checksum is string && data.checksum.size() >= 4 && data.checksum.size() <= 128;
+    }
+
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+    }
+
+    match /users/{uid} {
+      allow get: if isValidId(uid);
+      allow list: if request.time != null;
+      allow create: if isValidId(uid) && isValidUser(incoming());
+      allow update: if isValidUser(incoming()) && isValidId(uid);
+      allow delete: if isValidId(uid) && (isAdmin() || request.time != null);
+    }
+
+    match /staff_activity/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidStaffActivity(incoming());
+      allow update, delete: if isValidId(id);
+    }
+
+    match /otp_verification/{id} {
+      allow get: if isValidId(id);
+      allow list: if false;
+      allow create: if isValidId(id) && isValidOtp(incoming());
+      allow update: if isValidOtp(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /doctors/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidDoctor(incoming());
+      allow update: if isValidDoctor(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /appointments/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidAppointment(incoming());
+      allow update: if isValidAppointment(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /medicines/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidMedicine(incoming());
+      allow update: if isValidMedicine(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /batches/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidBatch(incoming());
+      allow update: if isValidBatch(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /invoices/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidInvoice(incoming());
+      allow update: if isValidInvoice(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /feedback/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidFeedback(incoming());
+      allow update: if isValidFeedback(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+
+    match /settings/{doc} {
+      allow get: if isValidId(doc);
+      allow list: if request.time != null;
+      allow create: if isValidId(doc) && isValidSettings(incoming());
+      allow update: if isValidSettings(incoming()) && isValidId(doc);
+      allow delete: if false;
+    }
+
+    match /counters/{doc} {
+      allow get: if isValidId(doc);
+      allow list: if request.time != null;
+      allow create: if isValidId(doc) && isValidCounter(incoming());
+      allow update: if isValidCounter(incoming()) && isValidId(doc);
+      allow delete: if false;
+    }
+
+    match /backups/{id} {
+      allow get: if isValidId(id);
+      allow list: if request.time != null;
+      allow create: if isValidId(id) && isValidBackup(incoming());
+      allow update: if isValidBackup(incoming()) && isValidId(id);
+      allow delete: if isValidId(id);
+    }
+  }
+}
